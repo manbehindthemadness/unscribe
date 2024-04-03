@@ -3,9 +3,9 @@ Go time!
 """
 from mcraft import download_if_not_exist
 try:
-    from main import Remover, models_path
+    from main import Remover, models_path, test
 except (ImportError, ModuleNotFoundError):
-    from .main import Remover, models_path
+    from .main import Remover, models_path, test
 
 
 models_urls = [

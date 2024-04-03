@@ -14,6 +14,14 @@ from dscribe.saicinpainting.evaluation.utils import move_to_device
 from torch.utils.data._utils.collate import default_collate  # noqa
 from dscribe.saicinpainting.training.trainers import load_checkpoint
 from dscribe.saicinpainting.evaluation.data import scale_image, pad_img_to_modulo
+try:
+    from utils import (
+        create_opacity_mask
+    )
+except ImportError:
+    from .utils import (
+        create_opacity_mask
+    )
 
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -75,18 +83,28 @@ class Remover(TNet):
             mat: np.ndarray = None,
             scale_factor: [int, float] = None,
             pad_out_to_modulo: [int, float] = 8,
-            test_run: bool = True
+            test_run: bool = False
     ) -> np.ndarray:
         """
         Load and process an image mat.
         """
         if test_run:
-            rgb_mat, mask_mat = img = [
+            rgb_mat, mask_mat = [
                 np.array(Image.open('dscribe/1.png').convert('RGB')),
                 np.array(Image.open('dscribe/2.png').convert('L'))
                 ]
         else:
-            pass
+            rgb_mat = mat
+            _, _, mask_mat = self.forward(mat)  # bboxes, polys, score_text
+
+            mask_mat = create_opacity_mask(mask_mat, half=True, clamp=0.1)
+            new_height, new_width = rgb_mat.shape[:2]
+            mask_mat = cv2.resize(mask_mat, (new_width, new_height))
+            # mask_mat = cv2.equalizeHist(mask_mat)
+
+            cv2.imshow('rgb', rgb_mat)
+            cv2.imshow('mask', mask_mat)
+            # cv2.waitKey(0)
         original = np.array(rgb_mat)
         processed_rgb_mat, processed_mask_mat = [
             self.process_mat(rgb_mat),
@@ -129,3 +147,15 @@ class Remover(TNet):
         cv2.destroyAllWindows()
 
         return cur_res
+
+
+def test(image: str = None):
+    """
+    Test the auto-removal pipeline.
+    """
+    if not image:
+        imsge = 'cover.jpg'
+    r = Remover()
+    mat = r.load_image(image)
+    r.load_mat(mat)
+
