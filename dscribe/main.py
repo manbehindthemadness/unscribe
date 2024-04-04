@@ -14,13 +14,14 @@ from dscribe.saicinpainting.evaluation.utils import move_to_device
 from torch.utils.data._utils.collate import default_collate  # noqa
 from dscribe.saicinpainting.training.trainers import load_checkpoint
 from dscribe.saicinpainting.evaluation.data import scale_image, pad_img_to_modulo
+# from saicinpainting.evaluation.refinement import refine_predict
 try:
     from utils import (
-        create_opacity_mask, visualize_polys, fetch_contours,
+        create_opacity_mask, visualize_polys, fetch_contours, mask_from_polys, convert_to_image,
     )
 except ImportError:
     from .utils import (
-        create_opacity_mask, visualize_polys, fetch_contours,
+        create_opacity_mask, visualize_polys, fetch_contours, mask_from_polys, convert_to_image,
     )
 
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -98,6 +99,7 @@ class Remover(TNet):
             test_run: bool = False,
             low_clamp: float = 0.1,
             high_clamp: float = 1.0,
+            passes: int = 1,
     ) -> np.ndarray:
         """
         Load and process an image mat.
@@ -114,6 +116,7 @@ class Remover(TNet):
             mask_mat = create_opacity_mask(mask_mat, half=True, low_clamp=low_clamp, high_clamp=high_clamp)
             new_height, new_width = rgb_mat.shape[:2]
             mask_mat = cv2.resize(mask_mat, (new_width, new_height))
+            mask_mat = mask_from_polys(mask_mat, polys)
             # mask_mat = fetch_contours(rgb_mat, mask_mat, polys)
             if self.show_mats:
                 cv2.imshow('rgb', rgb_mat)
@@ -140,21 +143,20 @@ class Remover(TNet):
             'mask': processed_mask_mat,
         }
         batch = default_collate([dataset])
+        # cur_res = refine_predict(batch, self.model, **predict_config.refiner)  # Requires a GPU.
         with torch.no_grad():
             self.d_print(batch)
             batch = move_to_device(batch, self.device)
             batch['mask'] = (batch['mask'] > 0) * 1
             self.d_print('image shape', batch['image'].shape)
             self.d_print('mask shape', batch['mask'].shape)
-            batch = self.model(batch)
-            cur_res = batch['inpainted'][0].permute(1, 2, 0).detach().cpu().numpy()
-            if un_pad_size is not None:
-                orig_height, orig_width = un_pad_size
-                cur_res = cur_res[:orig_height, :orig_width]
-        cur_res = np.clip(cur_res * 255, 0, 255).astype('uint8')
-        cur_res = cv2.cvtColor(cur_res, cv2.COLOR_RGB2BGR)
+            for _ in range(passes):
+                batch = self.model(batch)
+            inpainted_mat = convert_to_image(batch['inpainted'][0], un_pad_size)
+
+        inpainted_mat = cv2.cvtColor(inpainted_mat, cv2.COLOR_RGB2BGR)
         if self.show_mats:
-            cv2.imshow('inpainted', cur_res)
+            cv2.imshow('inpainted', inpainted_mat)
             original = cv2.cvtColor(original, cv2.COLOR_RGB2BGR)
             cv2.imshow('original', original)
             if not test_run:
@@ -162,8 +164,8 @@ class Remover(TNet):
                 cv2.imshow('poly mask', original)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-        self.d_print('output image size', cur_res.shape)
-        return cur_res
+        self.d_print('output image size', inpainted_mat.shape)
+        return inpainted_mat
 
 
 def test(image: str = None, low_clamp: float = 0.1, high_clamp: float = 0.9,):
@@ -174,4 +176,4 @@ def test(image: str = None, low_clamp: float = 0.1, high_clamp: float = 0.9,):
         image = 'cover.jpg'
     r = Remover(show_mats=True, debug=True)
     mat = r.load_image(image)
-    r.load_mat(mat, high_clamp=high_clamp, low_clamp=low_clamp)
+    r.load_mat(mat, high_clamp=high_clamp, low_clamp=low_clamp, passes=1)

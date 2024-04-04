@@ -5,6 +5,18 @@ import cv2
 import numpy as np
 
 
+def convert_to_image(tensor, un_pad_size: int = None) -> np.ndarray:
+    """
+    Converts a tensor to an image...
+    """
+    image = tensor.permute(1, 2, 0).detach().cpu().numpy()
+    if un_pad_size is not None:
+        orig_height, orig_width = un_pad_size
+        image = image[:orig_height, :orig_width]
+    image = np.clip(image * 255, 0, 255).astype('uint8')
+    return image
+
+
 def create_opacity_mask(
         heatmap_image: np.ndarray,
         hottest_color: list = [130, 29, 43],  # noqa
@@ -46,7 +58,43 @@ def create_opacity_mask(
     if high_clamp:
         opacity[opacity > high_clamp] = 1
     opacity_mask = (opacity * 255).astype(np.uint8)
+    opacity_mask[opacity_mask != 0] = 255
     return opacity_mask
+
+
+def expand_polygon(_poly: np.ndarray, image_shape: tuple, size: int = 2) -> np.ndarray:
+    """
+    Enlarge the poly by N pix in all directions.
+    """
+    min_x, min_y = np.min(_poly, axis=0)
+    max_x, max_y = np.max(_poly, axis=0)
+    min_x -= size
+    min_y -= size
+    max_x += size
+    max_y += size
+    # Ensure within image boundaries
+    min_x = max(0, min_x)
+    min_y = max(0, min_y)
+    max_x = min(image_shape[1] - 1, max_x)
+    max_y = min(image_shape[0] - 1, max_y)
+    # Create expanded polygon
+    expanded_poly = np.array([[min_x, min_y],
+                              [max_x, min_y],
+                              [max_x, max_y],
+                              [min_x, max_y]], dtype=np.float32)
+    return expanded_poly
+
+
+def mask_from_polys(mask: np.ndarray, polys: np.ndarray) -> np.ndarray:
+    """
+    Just draw a buncha squares...
+    """
+    void_mask = np.zeros_like(mask, dtype=np.uint8)
+    for poly in polys:
+        poly = expand_polygon(poly, mask.shape, 10)
+        poly = np.int32([poly])  # Convert polygon to integer.
+        cv2.fillPoly(void_mask, poly, (255, 255, 255))
+    return void_mask
 
 
 def fetch_contours(image: np.array, mask: np.array, polygons: np.array, show_images: bool = False):
@@ -65,28 +113,6 @@ def fetch_contours(image: np.array, mask: np.array, polygons: np.array, show_ima
             cv2.CHAIN_APPROX_SIMPLE
         )
         return _contours, _hierarchy
-
-    def expand_polygon(_poly: np.ndarray, image_shape: tuple, size: int = 2) -> np.ndarray:
-        """
-        Enlarge the poly by N pix in all directions.
-        """
-        min_x, min_y = np.min(_poly, axis=0)
-        max_x, max_y = np.max(_poly, axis=0)
-        min_x -= size
-        min_y -= size
-        max_x += size
-        max_y += size
-        # Ensure within image boundaries
-        min_x = max(0, min_x)
-        min_y = max(0, min_y)
-        max_x = min(image_shape[1] - 1, max_x)
-        max_y = min(image_shape[0] - 1, max_y)
-        # Create expanded polygon
-        expanded_poly = np.array([[min_x, min_y],
-                                  [max_x, min_y],
-                                  [max_x, max_y],
-                                  [min_x, max_y]], dtype=np.float32)
-        return expanded_poly
 
     image = np.array(image)  # Create new instance for viewing.
     void_mask = np.zeros_like(mask, dtype=np.uint8)
@@ -140,6 +166,4 @@ def visualize_polys(mat: np.array, polys: np.array, color: tuple = (0, 255, 0), 
     # mat = fetch_contours(mat, polys)
     for poly in polys:
         cv2.polylines(mat, [poly.astype(np.int32)], isClosed=True, color=color, thickness=thickness)
-
-
     return mat
