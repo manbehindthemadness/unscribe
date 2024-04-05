@@ -72,16 +72,14 @@ class InpaintingDataset(Dataset):
         result = dict(image=image, mask=mask[None, ...])
 
         if self.scale_factor is not None:
-            print('SCALING', self.scale_factor)
             result['image'] = scale_image(result['image'], self.scale_factor)
             result['mask'] = scale_image(result['mask'], self.scale_factor, interpolation=cv2.INTER_NEAREST)
 
         if self.pad_out_to_modulo is not None and self.pad_out_to_modulo > 1:
-            print('PADDING TO SIZE', self.pad_out_to_modulo)
             result['unpad_to_size'] = result['image'].shape[1:]
             result['image'] = pad_img_to_modulo(result['image'], self.pad_out_to_modulo)
             result['mask'] = pad_img_to_modulo(result['mask'], self.pad_out_to_modulo)
-        print('RESULT TYPE', type(result['image']))
+
         return result
 
 class OurInpaintingDataset(Dataset):

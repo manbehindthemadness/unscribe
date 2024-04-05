@@ -2,12 +2,12 @@ import enum
 from copy import deepcopy
 
 import numpy as np
-from skimage import img_as_ubyte  # noqa
+from skimage import img_as_ubyte
 from skimage.transform import rescale, resize
 try:
-    from detectron2 import model_zoo  # noqa
-    from detectron2.config import get_cfg  # noqa
-    from detectron2.engine import DefaultPredictor  # noqa
+    from detectron2 import model_zoo
+    from detectron2.config import get_cfg
+    from detectron2.engine import DefaultPredictor
     DETECTRON_INSTALLED = True
 except:
     print("Detectron v2 is not installed")

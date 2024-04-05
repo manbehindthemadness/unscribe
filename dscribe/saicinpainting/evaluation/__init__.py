@@ -1,5 +1,7 @@
 import logging
+
 import torch
+
 from dscribe.saicinpainting.evaluation.evaluator import InpaintingEvaluatorOnline, ssim_fid100_f1, lpips_fid100_f1
 from dscribe.saicinpainting.evaluation.losses.base_loss import SSIMScore, LPIPSScore, FIDScore
 

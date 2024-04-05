@@ -257,7 +257,7 @@ def make_default_val_dataset(indir, kind='default', out_size=512, transform_vari
 
     if transform_variant is not None:
         transform = get_transforms(transform_variant, out_size)
-    print('KIND', kind)
+
     if kind == 'default':
         dataset = InpaintingEvaluationDataset(indir, **kwargs)
     elif kind == 'our_eval':
@@ -276,7 +276,6 @@ def make_default_val_dataset(indir, kind='default', out_size=512, transform_vari
                                               **kwargs)
     else:
         raise ValueError(f'Unknown val dataset kind {kind}')
-    # print('DATASET KIND', kind)  # it's default...
 
     return dataset
 

@@ -13,7 +13,7 @@ from dscribe.saicinpainting.evaluation.utils import move_to_device
 from torch.utils.data._utils.collate import default_collate  # noqa
 from dscribe.saicinpainting.training.trainers import load_checkpoint
 from dscribe.saicinpainting.evaluation.data import scale_image, pad_img_to_modulo
-# from saicinpainting.evaluation.refinement import refine_predict
+from .cpu_refiner import refine_predict
 try:
     from utils import (
         create_opacity_mask, visualize_polys, fetch_contours, mask_from_polys, convert_to_image,
@@ -40,17 +40,23 @@ class Remover(TNet):
     """
     def __init__(
             self,
-            cuda: bool = False,
+            gpu: str = 'cpu,',
             poly: bool = False,
             refine: bool = False,
             debug: bool = False,
             show_mats: bool = False,
+            lama_refine: bool = False
     ):
+        cuda = True
+        if gpu == 'cpu,':
+            cuda = False
         super().__init__(
             cuda=cuda,
             poly=poly,
             refine=refine
         )
+        self.gpu = gpu
+        self.lama_refine = lama_refine
         self.debug = debug
         self.show_mats = show_mats
         self.device = torch.device("cuda:0" if cuda else "cpu")
@@ -99,7 +105,7 @@ class Remover(TNet):
             pad_out_to_modulo: [int, float] = 8,
             low_clamp: float = 0.1,
             high_clamp: float = 1.0,
-            passes: int = 1,
+            passes: int = 15,
             mode: MODES = 'scramble',
     ) -> np.ndarray:
         """
@@ -142,17 +148,36 @@ class Remover(TNet):
             'image': processed_rgb_mat,
             'mask': processed_mask_mat,
         }
-        batch = default_collate([dataset])
-        # cur_res = refine_predict(batch, self.model, **predict_config.refiner)  # Requires a GPU.
-        with torch.no_grad():
-            self.d_print(batch)
-            batch = move_to_device(batch, self.device)
-            batch['mask'] = (batch['mask'] > 0) * 1
-            self.d_print('image shape', batch['image'].shape)
-            self.d_print('mask shape', batch['mask'].shape)
-            for _ in range(passes):
+
+        if self.lama_refine:
+            dataset['unpad_to_size'] = un_pad_size
+            batch = default_collate([dataset])
+            assert 'unpad_to_size' in batch, "Unpadded size is required for the refinement"
+            # image unpadding is taken care of in the refiner, so that output image
+            # is same size as the input image
+            inpainted_mat = refine_predict(
+                batch,
+                self.model,
+                n_iters=passes,  # number of iterations of refinement for each scale
+                lr=0.002,  # learning rate
+                min_side=512,  # all sides of image on all scales should be >= min_side / sqrt(2)
+                max_scales=3,  # max number of downscaling scales for the image-mask pyramid
+                px_budget=1800000,  # pixels budget. Any image will be resized to satisfy height*width <= px_budget
+                modulo=pad_out_to_modulo,  # pad the image to ensure dimension % modulo == 0
+                gpu_ids=self.gpu
+            )
+            inpainted_mat = inpainted_mat[0].permute(1, 2, 0).detach().cpu().numpy()
+            print('REFINING')
+        else:
+            batch = default_collate([dataset])
+            with torch.no_grad():
+                self.d_print(batch)
+                batch = move_to_device(batch, self.device)
+                batch['mask'] = (batch['mask'] > 0) * 1
+                self.d_print('image shape', batch['image'].shape)
+                self.d_print('mask shape', batch['mask'].shape)
                 batch = self.model(batch)
-            inpainted_mat = convert_to_image(batch['inpainted'][0], un_pad_size)
+                inpainted_mat = convert_to_image(batch['inpainted'][0], un_pad_size)
         inpainted_mat = cv2.cvtColor(inpainted_mat, cv2.COLOR_RGB2BGR)
         if self.show_mats:
             original = cv2.cvtColor(original, cv2.COLOR_RGB2BGR)  # noqa
@@ -166,10 +191,14 @@ class Remover(TNet):
         return inpainted_mat
 
 
-def test(image: str = None, low_clamp: float = 0.1, high_clamp: float = 0.9, mode: MODES = 'scramble'):
+def test(image: str = None, low_clamp: float = 0.1, high_clamp: float = 0.9, mode: MODES = 'scramble', passes: int = 3):
     """
     Test the auto-removal pipeline.
     """
-    r = Remover(show_mats=True, debug=True)
+    r = Remover(
+        show_mats=True,
+        debug=True,
+        lama_refine=True
+    )
     mat = r.load_image(image)
-    r.load_mat(mat, high_clamp=high_clamp, low_clamp=low_clamp, passes=1, mode=mode)
+    r.load_mat(mat, high_clamp=high_clamp, low_clamp=low_clamp, passes=passes, mode=mode)

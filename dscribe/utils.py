@@ -152,7 +152,7 @@ def mask_from_polys(mask: np.ndarray, polys: np.ndarray) -> np.ndarray:
     """
     void_mask = np.zeros_like(mask, dtype=np.uint8)
     for poly in polys:
-        poly = expand_polygon(poly, mask.shape, 10)
+        poly = expand_polygon(poly, mask.shape, 15)
         poly = np.int32([poly])  # Convert polygon to integer.
         cv2.fillPoly(void_mask, poly, (255, 255, 255))
     return void_mask
