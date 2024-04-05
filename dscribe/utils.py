@@ -61,7 +61,9 @@ def create_alpha_channel(image: np.ndarray, alpha: np.ndarray) -> Image:
     return rgba_image
 
 
-def mask_refine(original_image: np.ndarray, inpainted_image: np.ndarray, mask: np.ndarray, radius: int = 5) -> np.ndarray:
+def mask_refine(
+        original_image: np.ndarray, inpainted_image: np.ndarray, mask: np.ndarray, radius: int = 5
+) -> np.ndarray:
     """
     An attempt at a mask based detail refiner.
     """
