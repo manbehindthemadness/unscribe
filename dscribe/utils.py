@@ -141,9 +141,10 @@ def fetch_contours(image: np.array, mask: np.array, polygons: np.array, show_ima
             cv2.imshow('gray mask step 3', edges)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-            # Draw contours on the original image
+            # Draw contours on the original image.
             cv2.drawContours(image, contours, -1, (0, 0, 255), cv2.FILLED)
             cv2.fillPoly(image, contours, (255, 0, 0))
+        # Draw contours on the mask.
         cv2.drawContours(void_mask, contours, -1, (255, 255, 255), cv2.FILLED)
         cv2.fillPoly(void_mask, contours, (255, 255, 255))
 
@@ -151,8 +152,10 @@ def fetch_contours(image: np.array, mask: np.array, polygons: np.array, show_ima
     exclusion_mask[exclusion_mask != 0] = 255
     exclusion_mask = 255 - exclusion_mask
     combined_mask = void_mask - exclusion_mask
-
-    return combined_mask
+    regions = combined_mask == 255
+    final_mask = np.array(mask)
+    final_mask[regions] = combined_mask[regions]
+    return final_mask
 
 
 def visualize_polys(mat: np.array, polys: np.array, color: tuple = (0, 255, 0), thickness: int = 1) -> np.ndarray:

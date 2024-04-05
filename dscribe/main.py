@@ -32,6 +32,8 @@ os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
 models_path = Path('~/.dscribe/').expanduser()
 
+MODES = ['scramble', 'remove', 'refine']
+
 
 class Remover(TNet):
     """
@@ -100,6 +102,8 @@ class Remover(TNet):
             low_clamp: float = 0.1,
             high_clamp: float = 1.0,
             passes: int = 1,
+            mode: MODES = 'scramble',
+            mask_refine: bool = False,  # Use a complex mask to recover features.
     ) -> np.ndarray:
         """
         Load and process an image mat.
@@ -112,16 +116,21 @@ class Remover(TNet):
                 ]
         else:
             rgb_mat = mat
-            _, polys, mask_mat = self.forward(mat)  # bboxes, polys, score_text
+            _, polys, mask_mat = self.forward(mat)  # bboxes, polys, score_text.
             mask_mat = create_opacity_mask(mask_mat, half=True, low_clamp=low_clamp, high_clamp=high_clamp)
             new_height, new_width = rgb_mat.shape[:2]
             mask_mat = cv2.resize(mask_mat, (new_width, new_height))
-            mask_mat = mask_from_polys(mask_mat, polys)
-            # mask_mat = fetch_contours(rgb_mat, mask_mat, polys)
+            match mode:
+                case 'scramble':
+                    mask_mat = fetch_contours(rgb_mat, mask_mat, polys)
+                case 'remove':
+                    mask_mat = mask_from_polys(mask_mat, polys)
+                case 'refine':
+                    print('refiner, coming soon!')
+
             if self.show_mats:
-                cv2.imshow('rgb', rgb_mat)
                 cv2.imshow('mask', mask_mat)
-        original = np.array(rgb_mat)
+                original = np.array(rgb_mat)
         processed_rgb_mat, processed_mask_mat = [
             self.process_mat(rgb_mat),
             self.process_mat(mask_mat)
@@ -153,22 +162,21 @@ class Remover(TNet):
             for _ in range(passes):
                 batch = self.model(batch)
             inpainted_mat = convert_to_image(batch['inpainted'][0], un_pad_size)
-
         inpainted_mat = cv2.cvtColor(inpainted_mat, cv2.COLOR_RGB2BGR)
         if self.show_mats:
-            cv2.imshow('inpainted', inpainted_mat)
-            original = cv2.cvtColor(original, cv2.COLOR_RGB2BGR)
+            original = cv2.cvtColor(original, cv2.COLOR_RGB2BGR)  # noqa
             cv2.imshow('original', original)
             if not test_run:
                 original = visualize_polys(original, polys)  # noqa
                 cv2.imshow('poly mask', original)
+            cv2.imshow('inpainted', inpainted_mat)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         self.d_print('output image size', inpainted_mat.shape)
         return inpainted_mat
 
 
-def test(image: str = None, low_clamp: float = 0.1, high_clamp: float = 0.9,):
+def test(image: str = None, low_clamp: float = 0.1, high_clamp: float = 0.9, mode: MODES = 'scramble'):
     """
     Test the auto-removal pipeline.
     """
@@ -176,4 +184,4 @@ def test(image: str = None, low_clamp: float = 0.1, high_clamp: float = 0.9,):
         image = 'cover.jpg'
     r = Remover(show_mats=True, debug=True)
     mat = r.load_image(image)
-    r.load_mat(mat, high_clamp=high_clamp, low_clamp=low_clamp, passes=1)
+    r.load_mat(mat, high_clamp=high_clamp, low_clamp=low_clamp, passes=1, mode=mode)
