@@ -103,7 +103,6 @@ class Remover(TNet):
             high_clamp: float = 1.0,
             passes: int = 1,
             mode: MODES = 'scramble',
-            mask_refine: bool = False,  # Use a complex mask to recover features.
     ) -> np.ndarray:
         """
         Load and process an image mat.

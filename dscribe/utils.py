@@ -3,6 +3,7 @@ Utilities.
 """
 import cv2
 import numpy as np
+from PIL import Image
 
 
 def convert_to_image(tensor, un_pad_size: int = None) -> np.ndarray:
@@ -15,6 +16,64 @@ def convert_to_image(tensor, un_pad_size: int = None) -> np.ndarray:
         image = image[:orig_height, :orig_width]
     image = np.clip(image * 255, 0, 255).astype('uint8')
     return image
+
+
+def overlay_images(background_img: np.ndarray, overlay_img: np.ndarray) -> np.ndarray:
+    """
+    Combine two images using an alpha channel.
+    """
+    if overlay_img.shape[2] != 4:
+        raise ValueError("Overlay image must have RGBA format (4 channels)")
+    if background_img.shape[:2] != overlay_img.shape[:2]:
+        overlay_img = cv2.resize(overlay_img, (background_img.shape[1], background_img.shape[0]))
+    alpha = overlay_img[:, :, 3] / 255.0
+    inv_alpha = 1.0 - alpha
+    result = np.empty_like(background_img)
+    for c in range(3):  # RGB channels
+        result[:, :, c] = (alpha * overlay_img[:, :, c] + inv_alpha * background_img[:, :, c]).astype(np.uint8)
+    return result
+
+
+def expand_and_blur_mask(mask, expand_radius, blur_radius) -> np.ndarray:
+    """
+    This will dilate the mask by N pixels and blur the mask with a radius of N.
+    """
+    kernel = np.ones((expand_radius * 2 + 1, expand_radius * 2 + 1), np.uint8)
+    expanded_mask = cv2.dilate(mask, kernel, iterations=1)
+    blurred_mask = cv2.GaussianBlur(expanded_mask.astype(np.float32), (blur_radius * 2 + 1, blur_radius * 2 + 1), 0)
+    blurred_mask = np.uint8(blurred_mask)
+    return blurred_mask
+
+
+def create_alpha_channel(image: np.ndarray, alpha: np.ndarray) -> Image:
+    """
+    Create an RGBA PIL image.
+    """
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    # Resize alpha channel to match the size of the original image
+    alpha_resized = cv2.resize(alpha, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
+
+    # Create RGBA image directly with alpha channel
+    rgba_image = np.zeros((*rgb_image.shape[:2], 4), dtype=np.uint8)
+    rgba_image[:, :, :3] = rgb_image
+    rgba_image[:, :, 3] = alpha_resized
+    return rgba_image
+
+
+def mask_refine(original_image: np.ndarray, inpainted_image: np.ndarray, mask: np.ndarray, radius: int = 5) -> np.ndarray:
+    """
+    An attempt at a mask based detail refiner.
+    """
+    blurred_mask = expand_and_blur_mask(mask, radius, radius * 4)
+    max_value = np.iinfo(blurred_mask.dtype).max  # Maximum value for the data type
+    blurred_mask = max_value - blurred_mask
+
+    cv2.imshow('blurred_mask', blurred_mask)
+
+    rgba_image = create_alpha_channel(original_image, blurred_mask)
+    composite = overlay_images(inpainted_image, rgba_image)
+    return composite
 
 
 def create_opacity_mask(
