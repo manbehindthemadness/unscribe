@@ -54,7 +54,7 @@ def refine_predict(
     if not gpu_ids:
         gpu_ids = ['cpu']
     print('devices', gpu_ids)
-    n_resnet_blocks = 0
+    n_resnet_blocks = 0  # noqa
     first_resblock_ind = 0
     found_first_resblock = False
     for idl in range(len(inpainter.generator.model)):
@@ -72,7 +72,7 @@ def refine_predict(
         devices = [torch.device('cpu')]
 
     # split the model into front, and rear parts
-    forward_front = inpainter.generator.model[0:first_resblock_ind]
+    forward_front = inpainter.generator.model[0:first_resblock_ind]  # noqa
     forward_front.to(devices[0])
     forward_rears = []
     for idd in range(len(gpu_ids)):
@@ -80,7 +80,7 @@ def refine_predict(
             forward_rears.append(inpainter.generator.model[first_resblock_ind + resblocks_per_gpu * (
                 idd):first_resblock_ind + resblocks_per_gpu * (idd + 1)])
         else:
-            forward_rears.append(inpainter.generator.model[first_resblock_ind + resblocks_per_gpu * (idd):])
+            forward_rears.append(inpainter.generator.model[first_resblock_ind + resblocks_per_gpu * (idd):])  # noqa
         forward_rears[idd].to(devices[idd])
 
     ls_images, ls_masks = _get_image_mask_pyramid(
