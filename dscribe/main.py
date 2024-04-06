@@ -29,7 +29,7 @@ os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['VECLIB_MAXIMUM_THREADS'] = '1'
 os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
-models_path = Path('~/.dscribe/').expanduser()
+models_path = Path('~/.cache/dscribe/').expanduser()
 
 MODES = ['scramble', 'remove', 'refine']
 
