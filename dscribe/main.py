@@ -153,8 +153,6 @@ class Remover(TNet):
             dataset['unpad_to_size'] = un_pad_size
             batch = default_collate([dataset])
             assert 'unpad_to_size' in batch, "Unpadded size is required for the refinement"
-            # image unpadding is taken care of in the refiner, so that output image
-            # is same size as the input image
             inpainted_mat = refine_predict(
                 batch,
                 self.model,

@@ -51,10 +51,8 @@ def create_alpha_channel(image: np.ndarray, alpha: np.ndarray) -> Image:
     """
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # Resize alpha channel to match the size of the original image
     alpha_resized = cv2.resize(alpha, (rgb_image.shape[1], rgb_image.shape[0]), interpolation=cv2.INTER_NEAREST)
 
-    # Create RGBA image directly with alpha channel
     rgba_image = np.zeros((*rgb_image.shape[:2], 4), dtype=np.uint8)
     rgba_image[:, :, :3] = rgb_image
     rgba_image[:, :, 3] = alpha_resized
@@ -133,12 +131,10 @@ def expand_polygon(_poly: np.ndarray, image_shape: tuple, size: int = 2) -> np.n
     min_y -= size
     max_x += size
     max_y += size
-    # Ensure within image boundaries
     min_x = max(0, min_x)
     min_y = max(0, min_y)
     max_x = min(image_shape[1] - 1, max_x)
     max_y = min(image_shape[0] - 1, max_y)
-    # Create expanded polygon
     expanded_poly = np.array([[min_x, min_y],
                               [max_x, min_y],
                               [max_x, max_y],
@@ -202,11 +198,9 @@ def fetch_contours(image: np.array, mask: np.array, polygons: np.array, show_ima
             cv2.imshow('gray mask step 3', edges)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-            # Draw contours on the original image.
-            cv2.drawContours(image, contours, -1, (0, 0, 255), cv2.FILLED)
+            cv2.drawContours(image, contours, -1, (0, 0, 255), cv2.FILLED)  # Draw contours on the original image.
             cv2.fillPoly(image, contours, (255, 0, 0))
-        # Draw contours on the mask.
-        cv2.drawContours(void_mask, contours, -1, (255, 255, 255), cv2.FILLED)
+        cv2.drawContours(void_mask, contours, -1, (255, 255, 255), cv2.FILLED)  # Draw contours on the mask.
         cv2.fillPoly(void_mask, contours, (255, 255, 255))
 
     exclusion_mask = np.array(mask)
@@ -227,7 +221,6 @@ def visualize_polys(mat: np.array, polys: np.array, color: tuple = (0, 255, 0), 
     if len(shape) == 2 or shape[-1] == 1:
         mat = np.stack((mat, mat, mat), axis=-1)
 
-    # mat = fetch_contours(mat, polys)
     for poly in polys:
         cv2.polylines(mat, [poly.astype(np.int32)], isClosed=True, color=color, thickness=thickness)
     return mat
