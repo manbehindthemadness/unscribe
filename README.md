@@ -66,10 +66,12 @@ cv2.imshow("Text Scrambled", scrambled_image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 ```
+<img width="832" alt="lan" src="https://github.com/manbehindthemadness/describe/assets/24589462/23498605-2f54-4826-bcb1-b5bb19ed9a7f">
 
 ### Removing Text
 
 To remove text entirely from an image, you can use the following code:
+- Ensure to set `lama_refine=True` in the `Remover` initialization to utilize the `passes` parameter effectively for better text removal results.
 
 ```python
 from dscribe import Remover
@@ -105,8 +107,8 @@ cv2.imshow("Text Removed", removed_text_image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 ```
+<img width="949" alt="create" src="https://github.com/manbehindthemadness/describe/assets/24589462/ceb25d12-3c77-49f8-bc91-21157eec4f3b">
 
-Ensure to set `lama_refine=True` in the `Remover` initialization to utilize the `passes` parameter effectively for better text removal results.
 
 ## Notes
 - LaMa: Large mat processing and inpainting [repository](https://github.com/advimman/lama)
