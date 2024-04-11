@@ -1,6 +1,6 @@
-/dscribe/bin/
-/dscribe/LaMa_test_images/
+/unscribe/bin/
+/unscribe/LaMa_test_images/
 /output/
 /outputs/
-/dscribe/configs/
+/unscribe/configs/
 /*.jpg

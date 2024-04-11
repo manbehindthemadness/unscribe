@@ -1,6 +1,6 @@
-# Describe
+# Unscribe
 
-Describe is a Python library for text removal and scrambling in images using LaMa inpainting and CRAFT text detection.
+Unscribe is a Python library for text removal and scrambling in images using LaMa inpainting and CRAFT text detection.
 
 ## Diagrams:
 ### The following techniques were used in the creation of this project:
@@ -20,7 +20,7 @@ Describe is a Python library for text removal and scrambling in images using LaM
 You can install Describe using pip:
 
 ```bash
-pip install de-scribe
+pip install unscribe
 ```
 
 ## Usage
@@ -32,7 +32,7 @@ You can replace `"path/to/your/image.jpg"` with the actual path to your image fi
 To scramble text in an image, you can use the following code:
 
 ```python
-from dscribe import Remover
+from unscribe import Remover
 import cv2
 
 # Initialize the Remover with debug and visualization enabled
@@ -74,7 +74,8 @@ To remove text entirely from an image, you can use the following code:
 - Ensure to set `lama_refine=True` in the `Remover` initialization to utilize the `passes` parameter effectively for better text removal results.
 
 ```python
-from dscribe import Remover
+from unscribe import Remover
+import cv2
 
 # Initialize the Remover with debug and visualization enabled
 remover = Remover(
