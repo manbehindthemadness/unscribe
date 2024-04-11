@@ -20,7 +20,7 @@ Describe is a Python library for text removal and scrambling in images using LaM
 You can install Describe using pip:
 
 ```bash
-pip install describe
+pip install de-scribe
 ```
 
 ## Usage
