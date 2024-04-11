@@ -2,6 +2,19 @@
 
 Describe is a Python library for text removal and scrambling in images using LaMa inpainting and CRAFT text detection.
 
+## Diagrams:
+### The following techniques were used in the creation of this project:
+
+#### Large Mask Inpainting with Fourier Convolutions:
+
+![Large Mask Inpainting with Fourier Convolutions](https://raw.githubusercontent.com/geekyutao/Inpaint-Anything/main/example/MainFramework.png)
+#### Character Region Awareness For Text Detection:
+
+![Large Mask Inpainting with Fourier Convolutions](https://github.com/clovaai/CRAFT-pytorch/raw/master/figures/craft_example.gif)
+#### Contour detection:
+
+![opencv](https://docs.opencv.org/4.x/Find_Contours_Original_Image.jpg)![opencv](https://docs.opencv.org/4.x/Find_Contours_Result.jpg)
+
 ## Installation
 
 You can install Describe using pip:
@@ -94,6 +107,12 @@ cv2.destroyAllWindows()
 ```
 
 Ensure to set `lama_refine=True` in the `Remover` initialization to utilize the `passes` parameter effectively for better text removal results.
+
+## Notes
+- LaMa: Large mat processing and inpainting [repository](https://github.com/advimman/lama)
+- Modern Craft: Character Region Awareness For Text Detection [repository](https://github.com/manbehindthemadness/modern-craft)
+- Official CRAFT-PyTorch [repository](https://github.com/clovaai/CRAFT-pytorch)
+- I own none of the images used in this document, diagrams are from other repositories and examples are random from the internet.
 
 ## License
 
