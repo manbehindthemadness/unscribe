@@ -1,2 +1,100 @@
-# describe
-A modern adaptation of LaMa and CRAFT to remove text and watermarks from images
+# Describe
+
+Describe is a Python library for text removal and scrambling in images using LaMa inpainting and CRAFT text detection.
+
+## Installation
+
+You can install Describe using pip:
+
+```bash
+pip install describe
+```
+
+## Usage
+
+You can replace `"path/to/your/image.jpg"` with the actual path to your image file. This README provides usage examples for both scrambling and removing text from images.
+
+### Scrambling Text
+
+To scramble text in an image, you can use the following code:
+
+```python
+from dscribe import Remover
+import cv2
+
+# Initialize the Remover with debug and visualization enabled
+remover = Remover(
+    show_mats=True,
+    debug=True,
+    lama_refine=True
+)
+
+# Define parameters for scrambling text
+image_path = "path/to/your/image.jpg"
+low_clamp = 0.1
+high_clamp = 0.9
+mode = "scramble"  # Set mode to "scramble" for text scrambling
+passes = 3
+
+# Load the image
+image = cv2.imread(image_path)
+
+# Use the load_mat method to scramble text in the image
+scrambled_image = remover.load_mat(
+    mat=image,
+    low_clamp=low_clamp,
+    high_clamp=high_clamp,
+    mode=mode,
+    passes=passes
+)
+
+# Display or save the resulting scrambled image
+cv2.imshow("Text Scrambled", scrambled_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+```
+
+### Removing Text
+
+To remove text entirely from an image, you can use the following code:
+
+```python
+from dscribe import Remover
+
+# Initialize the Remover with debug and visualization enabled
+remover = Remover(
+    show_mats=True,
+    debug=True,
+    lama_refine=True
+)
+
+# Define parameters for removing text
+image_path = "path/to/your/image.jpg"
+low_clamp = 0.1
+high_clamp = 0.9
+mode = "remove"  # Set mode to "remove" for text removal
+passes = 13
+
+# Load the image
+image = cv2.imread(image_path)
+
+# Use the load_mat method to remove text from the image
+removed_text_image = remover.load_mat(
+    mat=image,
+    low_clamp=low_clamp,
+    high_clamp=high_clamp,
+    mode=mode,
+    passes=passes
+)
+
+# Display or save the resulting image with removed text
+cv2.imshow("Text Removed", removed_text_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+```
+
+Ensure to set `lama_refine=True` in the `Remover` initialization to utilize the `passes` parameter effectively for better text removal results.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

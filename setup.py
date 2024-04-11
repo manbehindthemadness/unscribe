@@ -15,6 +15,7 @@ install_requires = [
     'scikit-image==0.17.2',
     'scikit-learn==0.24.2',
     'joblib',
+    'Pillow',
     'matplotlib',
     'mcraft',
     'pandas',
