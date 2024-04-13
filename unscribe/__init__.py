@@ -1,7 +1,7 @@
 """
 Go time!
 """
-from mcraft import download_if_not_exist
+from quickdl import dl
 try:
     from main import Remover, models_path, test
 except (ImportError, ModuleNotFoundError):
@@ -14,4 +14,4 @@ models_urls = [
     ]
 
 for model_url in models_urls:
-    download_if_not_exist(models_path, model_url)
+    dl(models_path, model_url)

@@ -30,7 +30,8 @@ install_requires = [
     'torch>=2.0.0',
     'pytorch-lightning==1.2.9',
     'kornia==0.5.0',
-    'torchvision>=0.17.0'
+    'torchvision>=0.17.0',
+    'quickdl',
 ]
 
 exclusions = [
@@ -50,7 +51,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='unscribe',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(),
     install_requires=install_requires,
     entry_points={
