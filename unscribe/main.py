@@ -13,7 +13,7 @@ from unscribe.saicinpainting.evaluation.utils import move_to_device
 from torch.utils.data._utils.collate import default_collate  # noqa
 from unscribe.saicinpainting.training.trainers import load_checkpoint
 from unscribe.saicinpainting.evaluation.data import scale_image, pad_img_to_modulo
-from .cpu_refiner import refine_predict
+from .refiner import refine_predict
 try:
     from utils import (
         create_opacity_mask, visualize_polys, fetch_contours, mask_from_polys, convert_to_image,
@@ -31,7 +31,7 @@ os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
 models_path = Path('~/.cache/dscribe/').expanduser()
 
-MODES = ['scramble', 'remove', 'refine']
+MODES = ['scramble', 'remove']
 
 
 class Remover(TNet):
@@ -40,7 +40,7 @@ class Remover(TNet):
     """
     def __init__(
             self,
-            gpu: str = 'cpu,',
+            gpu: str = 'cpu',
             poly: bool = False,
             refine: bool = False,
             debug: bool = False,
@@ -48,7 +48,7 @@ class Remover(TNet):
             lama_refine: bool = False
     ):
         cuda = True
-        if gpu == 'cpu,':
+        if gpu == 'cpu':
             cuda = False
         super().__init__(
             cuda=cuda,
@@ -60,6 +60,7 @@ class Remover(TNet):
         self.debug = debug
         self.show_mats = show_mats
         self.device = torch.device("cuda:0" if cuda else "cpu")
+        self.d_print('DEVICE', self.device)
         self.models_path = models_path
         self.config_path = self.models_path / 'config.yaml'
         with open(self.config_path.as_posix(), 'r') as f:
@@ -75,7 +76,7 @@ class Remover(TNet):
             self.checkpoint_path.as_posix(),
             strict=False,
             map_location=self.device
-        )
+        ).to(self.device)
         self.model.freeze()
 
     def d_print(self, *args, **kwargs):
@@ -106,6 +107,10 @@ class Remover(TNet):
             low_clamp: float = 0.1,
             high_clamp: float = 1.0,
             passes: int = 15,
+            lr: float = 0.002,  # learning rate
+            min_side: int = 512,  # all sides of image on all scales should be >= min_side / sqrt(2)
+            max_scales: int = 3,  # max number of downscaling scales for the image-mask pyramid
+            px_budget: int = 1800000,  # pixels budget. Any image will be resized to satisfy height*width <= px_budget
             mode: MODES = 'scramble',
     ) -> np.ndarray:
         """
@@ -122,8 +127,6 @@ class Remover(TNet):
                 mask_mat = fetch_contours(rgb_mat, mask_mat, polys)
             case 'remove':
                 mask_mat = mask_from_polys(mask_mat, polys)
-            case 'refine':
-                print('refiner, coming soon!')
 
         if self.show_mats:
             cv2.imshow('mask', mask_mat)
@@ -157,15 +160,15 @@ class Remover(TNet):
                 batch,
                 self.model,
                 n_iters=passes,  # number of iterations of refinement for each scale
-                lr=0.002,  # learning rate
-                min_side=512,  # all sides of image on all scales should be >= min_side / sqrt(2)
-                max_scales=3,  # max number of downscaling scales for the image-mask pyramid
-                px_budget=1800000,  # pixels budget. Any image will be resized to satisfy height*width <= px_budget
+                lr=lr,  # learning rate
+                min_side=min_side,  # all sides of image on all scales should be >= min_side / sqrt(2)
+                max_scales=max_scales,  # max number of downscaling scales for the image-mask pyramid
+                px_budget=px_budget,  # pixels budget. Any image will be resized to satisfy height*width <= px_budget
                 modulo=pad_out_to_modulo,  # pad the image to ensure dimension % modulo == 0
                 gpu_ids=self.gpu
             )
             inpainted_mat = inpainted_mat[0].permute(1, 2, 0).detach().cpu().numpy()
-            print('REFINING')
+            self.d_print(f'REFINING on {self.device}')
         else:
             batch = default_collate([dataset])
             with torch.no_grad():

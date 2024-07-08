@@ -49,11 +49,11 @@ def refine_predict(
     assert not inpainter.training
     assert not inpainter.add_noise_kwargs
     assert inpainter.concat_mask
-
+    if gpu_ids == 'cuda':
+        gpu_ids = '0'
     gpu_ids = [f'cuda:{gpuid}' for gpuid in gpu_ids.replace(" ", "").split(",") if gpuid.isdigit()]
     if not gpu_ids:
         gpu_ids = ['cpu']
-    print('devices', gpu_ids)
     n_resnet_blocks = 0  # noqa
     first_resblock_ind = 0
     found_first_resblock = False
